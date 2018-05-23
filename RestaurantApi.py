@@ -1,9 +1,12 @@
 from flask import Flask
 from flask import jsonify
 from flask import request
+from json import dumps
 from pymongo import MongoClient
 
+import os
 import controllers.database_controller as db_controller
+import controllers.images_controler as img_controller
 
 app = Flask(__name__)
 
@@ -22,15 +25,24 @@ drinks_collection = restaurant_db.drinks
 # Connect to plates collection
 plates_collection = restaurant_db.plates
 
+# Define URL folder to save images
+main_folder = os.path.realpath(__file__).replace('\\', '/').split('/')[0: -1]
+user_imgs = os.path.join('/'.join(main_folder), 'static', 'images', 'user/')
+drink_imgs = os.path.join('/'.join(main_folder), 'static', 'images', 'drinks/')
+plate_imgs = os.path.join('/'.join(main_folder), 'static', 'images', 'plates/')
+
 
 # GET
 @app.route('/')
 def hello_world():
     """
-    :return: JSON: {success: success, "message": message}
+    :return: JSON: {"success": success, "message": message}
     """
     success = True
     message = 'Restaurant App index'
+    # print(user_images)
+    # print(drinks_images)
+    # print(plates_images)
     return jsonify({
         "success": success,
         "message": message
@@ -42,10 +54,10 @@ def hello_world():
 def login():
     """
     :param: JSON: {"email": email, "password": password}
-    :return: JSON: {success: success, "message": message}
+    :return: JSON: {"success": success, "message": message}
     """
     json = request.get_json()
-    success, message = db_controller.search_user(users_collection, json)
+    success, message = db_controller.login_user(users_collection, json)
     return jsonify({
         "success": success,
         "message": message
@@ -56,21 +68,44 @@ def login():
 @app.route('/singup', methods=['POST'])
 def singup():
     """
-    :param:     {
+    :param: JSON: {
                     "username": username,
                     "email": email,
                     "password": password,
                     "status": status,
                     "photo": photo
-                }
-    :return:    {success: success, "message": message}
+              }
+    :return: JSON: {"success": success, "message": message}
     """
     json = request.get_json()
-    success, message = db_controller.insert_user(users_collection, json)
-    return jsonify({
-        "success": success,
-        "message": message
-    })
+    url_photo = img_controller.decode__image(
+        user_imgs, json['email'], json['photo']
+    )
+    success, message = db_controller.insert_user(
+        users_collection, json, url_photo
+    )
+    return jsonify(success, message)
+
+
+# POST
+@app.route('/data/user', methods=['POST'])
+def find_user():
+    """
+    :param: JSON: {
+                    "name": name,
+                    "kind": kind,
+                    "price": price,
+                    "preparation_time": preparation_time,
+                    "photo": photo
+              }
+    :return: JSON: {message}
+    """
+    json = request.get_json()
+    success, message = db_controller.find_user(users_collection, json)
+    if success:
+        photo = img_controller.encoder_base64_image(message['photo'])
+        message['photo'] = photo
+    return jsonify(message)
 
 
 # GET
@@ -78,22 +113,14 @@ def singup():
 def get_all_plates():
     """
     :param:
-    :return:    {
-                    success: success,
-                    message:    [{
-                                   "name": name,
-                                   "kind": kind,
-                                   "price": price,
-                                   "preparation_time":preparation_time,
-                                   "photo": photo,
-                                }]
-                }
+    :return: JSON: {message}
     """
     success, message = db_controller.get_plates(plates_collection)
-    return jsonify({
-        "success": success,
-        "message": message
-    })
+    if success:
+        for item in message:
+            photo = img_controller.encoder_base64_image(item['photo'])
+            item['photo'] = photo
+    return jsonify(message)
 
 
 # GET
@@ -101,37 +128,36 @@ def get_all_plates():
 def get_all_drinks():
     """
     :param:
-    :return:    {
-                   success: success,
-                   message: [{
-                                "name": name,
-                                "price": price,
-                                "photo": photo,
-                            }]
-                }
+    :return: JSON: {message}
     """
     success, message = db_controller.get_drinks(drinks_collection)
-    return jsonify({
-        "success": success,
-        "message": message
-    })
+    if success:
+        for item in message:
+            photo = img_controller.encoder_base64_image(item['photo'])
+            item['photo'] = photo
+    return jsonify(message)
 
 
 # POST
 @app.route('/data/plates', methods=['POST'])
 def save_plate():
     """
-    :param:     {
+    :param: JSON: {
                     "name": name,
                     "kind": kind,
                     "price": price,
                     "preparation_time": preparation_time,
                     "photo": photo
-                }
-    :return:    {success: success, "message": message}
+              }
+    :return: JSON: {"success": success, "message": message}
     """
     json = request.get_json()
-    success, message = db_controller.insert_plate(plates_collection, json)
+    url_photo = img_controller.decode__image(
+        plate_imgs, json['name'], json['photo']
+    )
+    success, message = db_controller.insert_plate(
+        plates_collection, json, url_photo
+    )
     return jsonify({
         "success": success,
         "message": message
@@ -142,15 +168,20 @@ def save_plate():
 @app.route('/data/drinks', methods=['POST'])
 def save_drink():
     """
-    :param:     {
+    :param: JSON: {
                     "name": name,
                     "price": price,
                     "photo": photo
-                }
-    :return:    {success: success, "message": message}
+              }
+    :return: JSON: {"success": success, "message": message}
     """
     json = request.get_json()
-    success, message = db_controller.insert_drink(drinks_collection, json)
+    url_photo = img_controller.decode__image(
+        drink_imgs, json['name'], json['photo']
+    )
+    success, message = db_controller.insert_drink(
+        drinks_collection, json, url_photo
+    )
     return jsonify({
         "success": success,
         "message": message
@@ -162,7 +193,7 @@ def save_drink():
 def page_not_found(error):
     """
     :param error:
-    :return:    {success: success, "message": message}
+    :return: JSON: {"success": success, "message": message}
     """
     success = False
     message = str(error)
@@ -178,7 +209,7 @@ def page_not_found(error):
 def server_error(error):
     """
     :param error:
-    :return:    success: success, "message": message}
+    :return: JSON: {"success": success, "message": message}
     """
     success = False
     message = str(error)
@@ -190,4 +221,4 @@ def server_error(error):
 
 
 if __name__ == '__main__':
-    app.run(host="127.0.0.1", port=5000)
+    app.run(host="0.0.0.0", port=5000)

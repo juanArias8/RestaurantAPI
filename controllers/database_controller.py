@@ -3,10 +3,12 @@ controller_database define all operations whit mongodb database
 insert, search, update and delete fields from database
 """
 
-from bson.json_util import dumps
+# user_images_path = './images/users/'
+# drink_images_path = './images/drinks/'
+# plate_images_path = './images/plates/'
 
 
-def search_user(collection, json) -> tuple:
+def login_user(collection, json) -> tuple:
     success = False
     try:
         email = json['email']
@@ -32,17 +34,17 @@ def search_user(collection, json) -> tuple:
     return success, message
 
 
-def insert_user(collection, json) -> tuple:
+def insert_user(collection, json, url_photo: str) -> tuple:
     success = False
     try:
         username = json['username']
         email = json['email']
         password = json['password']
         status = json['status']
-        photo = json['photo']
+        photo = url_photo
     except Exception as e:
         print(e)
-        message = 'All inputs are required'
+        message = 'All inputs are required',
     else:
         try:
             collection.insert(
@@ -63,6 +65,35 @@ def insert_user(collection, json) -> tuple:
     return success, message
 
 
+def find_user(collection, json) -> tuple:
+    success = False
+    try:
+        email = json['email']
+    except Exception as e:
+        print(e)
+        message = 'An error has occurred'
+    else:
+        try:
+            user = collection.find_one(
+               {
+                   'email': email
+               }
+            )
+        except Exception as e:
+            print(e)
+            message = str(e)
+        else:
+            success = True
+            message = {
+                "username": user['username'],
+                "email": user['email'],
+                "password": user['password'],
+                "status": user['status'],
+                "photo": user['photo']
+            }
+    return success, message
+
+
 def get_plates(collection) -> tuple:
     success = False
     try:
@@ -72,10 +103,18 @@ def get_plates(collection) -> tuple:
         message = str(e)
     else:
         success = True
-        plates_response = dumps(plates_response)
-        if len(plates_response) > 2:
-            message = plates_response
-            print(message)
+        if plates_response.count() > 0:
+            plates = []
+            for plate in plates_response:
+                plate = {
+                    'name': plate['name'],
+                    'kind': plate['kind'],
+                    'price': plate['price'],
+                    'preparation_time': plate['preparation_time'],
+                    'photo': plate['photo']
+                }
+                plates.append(plate)
+            message = plates
         else:
             message = 'There is no plates yet'
     return success, message
@@ -90,23 +129,28 @@ def get_drinks(collection) -> tuple:
         message = str(e)
     else:
         success = True
-        drinks_response = dumps(drinks_response)
-        if len(drinks_response) > 2:
-            message = drinks_response
-            print(message)
+        if drinks_response.count() > 0:
+            drinks = []
+            for drink in drinks_response:
+                drink = {
+                    'name': drink['name'],
+                    'price': drink['price'],
+                    'photo': drink['photo']
+                }
+                drinks.append(drink)
+            message = drinks
         else:
             message = 'There is no drinks yet'
     return success, message
 
 
-def insert_plate(collection, json):
+def insert_plate(collection, json, url_photo: str):
     success = False
     try:
         name = json['name']
         kind = json['kind']
         price = json['price']
         preparation_time = json['preparation_time']
-        photo = json['photo']
     except Exception as e:
         print(e)
         message = 'All inputs are required'
@@ -118,7 +162,7 @@ def insert_plate(collection, json):
                    'kind': kind,
                    'price': price,
                    'preparation_time': preparation_time,
-                   'photo': photo
+                   'photo': url_photo
                }
             )
         except Exception as e:
@@ -130,12 +174,11 @@ def insert_plate(collection, json):
     return success, message
 
 
-def insert_drink(collection, json):
+def insert_drink(collection, json, url_photo: str):
     success = False
     try:
         name = json['name']
         price = json['price']
-        photo = json['photo']
     except Exception as e:
         print(e)
         message = 'All inputs are required'
@@ -145,7 +188,7 @@ def insert_drink(collection, json):
                {
                    'name': name,
                    'price': price,
-                   'photo': photo
+                   'photo': url_photo
                }
             )
         except Exception as e:

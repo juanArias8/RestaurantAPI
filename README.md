@@ -8,11 +8,11 @@ It's developed using Python 3.x, Flask, MongoDB and Pymongo.
 The server exposes a REST API allowing operate with web services.
 ***
 ### Endpoints
-#### Index
+Index
 * / ==> method==GET 
 * * return:     {success: success, "message": message} 
 
-#### Users
+Users
 * /login ==> method==POST
 * * param:      {"email": email, "password": password}
 * * return:     {success: success, "message": message}
@@ -26,7 +26,7 @@ The server exposes a REST API allowing operate with web services.
                 }
 * * return:     {success: success, "message": message}
 
-#### Plates
+Plates
 * /data/plates ==> method==GET
 * * return:     {  
                     success: success,  
@@ -48,7 +48,7 @@ The server exposes a REST API allowing operate with web services.
                 }
 * * return:     {success: success, "message": message}
 
-#### Drinks
+Drinks
 * /data/drinks ==> method==GET
 * * return:     {  
                    success: success,  
